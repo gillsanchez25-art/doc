@@ -1,1 +1,35 @@
 
+name: Compilar AeroDoc APK
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Descargar codigo
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Instalar dependencias
+        run: npm install
+
+      - name: Compilar aplicacion web
+        run: npm run build
+
+      - name: Guardar compilacion web
+        uses: actions/upload-artifact@v4
+        with:
+          name: AeroDoc-web
+          path: dist/
+          
