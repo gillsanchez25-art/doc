@@ -1,8 +1,14 @@
-
-name: Compilar AeroDoc APK
+name: Compilar AeroDoc
 
 on:
   workflow_dispatch:
+  push:
+    paths:
+      - "src/**"
+      - "package.json"
+      - "package-lock.json"
+      - "vite.config.ts"
+      - ".github/workflows/build-apk.yml"
 
 permissions:
   contents: read
@@ -27,9 +33,10 @@ jobs:
       - name: Compilar aplicacion web
         run: npm run build
 
-      - name: Guardar compilacion web
+      - name: Guardar compilacion
         uses: actions/upload-artifact@v4
         with:
           name: AeroDoc-web
           path: dist/
+          if-no-files-found: error
           
