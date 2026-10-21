@@ -53,7 +53,10 @@ export const PilotDossierView: React.FC<PilotDossierViewProps> = ({
     allDocuments,
     deleteLicense,
     deleteMedicalCertificate,
+    deletePilot,
   } = useAviation();
+
+  const [pilotToDelete, setPilotToDelete] = useState<Pilot | null>(null);
 
   const [selectedPilotId, setSelectedPilotId] = useState<string>(() => {
     return selectedPilotIdProp || (pilots.length > 0 ? pilots[0].id : '');
@@ -178,16 +181,16 @@ export const PilotDossierView: React.FC<PilotDossierViewProps> = ({
               const cleared = Boolean(pLic && pLic.status !== 'expired' && pMed && pMed.status !== 'expired');
 
               return (
-                <button
+                <div
                   key={p.id}
                   onClick={() => setSelectedPilotId(p.id)}
-                  className={`w-full text-left p-3 rounded-xl transition-all my-1 flex items-center justify-between gap-3 ${
+                  className={`group w-full text-left p-3 rounded-xl transition-all my-1 flex items-center justify-between gap-2.5 cursor-pointer ${
                     isSelected
                       ? 'bg-slate-800 border border-sky-500/50 shadow-sm'
                       : 'hover:bg-slate-800/50 border border-transparent'
                   }`}
                 >
-                  <div className="min-w-0">
+                  <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-bold text-white truncate block">
                         {p.fullName}
@@ -200,29 +203,43 @@ export const PilotDossierView: React.FC<PilotDossierViewProps> = ({
                     </div>
                   </div>
 
-                  <div className="text-right shrink-0">
-                    <span
-                      className={`text-[11px] font-semibold flex items-center gap-1 ${
-                        cleared ? 'text-emerald-400' : 'text-amber-400'
-                      }`}
-                    >
-                      {cleared ? (
-                        <>
-                          <CheckCircle2 className="w-3.5 h-3.5" />
-                          <span>Apto</span>
-                        </>
-                      ) : (
-                        <>
-                          <AlertTriangle className="w-3.5 h-3.5" />
-                          <span>No Apto</span>
-                        </>
-                      )}
-                    </span>
-                    <div className="text-[10px] text-slate-500 mt-0.5 font-mono">
-                      {pLic ? pLic.category : 'Sin lic'} / {pMed ? pMed.medicalClass : 'Sin med'}
+                  <div className="flex items-center gap-2 shrink-0">
+                    <div className="text-right">
+                      <span
+                        className={`text-[11px] font-semibold flex items-center justify-end gap-1 ${
+                          cleared ? 'text-emerald-400' : 'text-amber-400'
+                        }`}
+                      >
+                        {cleared ? (
+                          <>
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                            <span>Apto</span>
+                          </>
+                        ) : (
+                          <>
+                            <AlertTriangle className="w-3.5 h-3.5" />
+                            <span>No Apto</span>
+                          </>
+                        )}
+                      </span>
+                      <div className="text-[10px] text-slate-500 mt-0.5 font-mono">
+                        {pLic ? pLic.category : 'Sin lic'} / {pMed ? pMed.medicalClass : 'Sin med'}
+                      </div>
                     </div>
+
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setPilotToDelete(p);
+                      }}
+                      className="p-1.5 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-rose-950/60 opacity-60 group-hover:opacity-100 transition-all"
+                      title={`Eliminar piloto ${p.fullName}`}
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
                   </div>
-                </button>
+                </div>
               );
             })}
           </div>
@@ -305,13 +322,24 @@ export const PilotDossierView: React.FC<PilotDossierViewProps> = ({
                     </span>
                   </div>
 
-                  <button
-                    onClick={() => onOpenScannerForPilot(activePilot)}
-                    className="text-xs font-semibold text-sky-400 hover:text-sky-300 transition-colors flex items-center gap-1"
-                  >
-                    <Scan className="w-3.5 h-3.5" />
-                    <span>Escanear credencial con IA</span>
-                  </button>
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => setPilotToDelete(activePilot)}
+                      className="text-xs font-semibold text-rose-400/80 hover:text-rose-300 hover:bg-rose-950/40 px-2.5 py-1 rounded-lg border border-rose-900/40 hover:border-rose-700/60 transition-colors flex items-center gap-1.5"
+                      title="Eliminar este expediente de piloto"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>Eliminar Piloto</span>
+                    </button>
+
+                    <button
+                      onClick={() => onOpenScannerForPilot(activePilot)}
+                      className="text-xs font-semibold text-sky-400 hover:text-sky-300 transition-colors flex items-center gap-1"
+                    >
+                      <Scan className="w-3.5 h-3.5" />
+                      <span>Escanear credencial con IA</span>
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -613,6 +641,69 @@ export const PilotDossierView: React.FC<PilotDossierViewProps> = ({
         </div>
 
       </div>
+
+      {/* Confirmation Modal for Pilot Deletion */}
+      {pilotToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-150">
+          <div className="bg-slate-900 border border-rose-500/40 rounded-2xl w-full max-w-md p-6 shadow-2xl space-y-4">
+            <div className="flex items-center gap-3 text-rose-400">
+              <div className="w-10 h-10 rounded-xl bg-rose-950/80 border border-rose-800/60 flex items-center justify-center shrink-0">
+                <Trash2 className="w-5 h-5 text-rose-400" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-white">¿Eliminar Expediente de Piloto?</h3>
+                <p className="text-xs text-rose-400/80">Acción permanente en el padrón técnico</p>
+              </div>
+            </div>
+
+            <div className="p-3.5 rounded-xl bg-slate-950/70 border border-slate-800 space-y-1.5 text-xs text-slate-300">
+              <div>
+                <span className="text-slate-500">Tripulante:</span>{' '}
+                <span className="font-bold text-white">{pilotToDelete.fullName}</span>
+              </div>
+              <div>
+                <span className="text-slate-500">Rol / Rango:</span>{' '}
+                <span className="font-mono text-sky-400">{pilotToDelete.role}</span>
+              </div>
+              <div>
+                <span className="text-slate-500">Base / Horas:</span>{' '}
+                <span>{pilotToDelete.baseAirport} · {pilotToDelete.totalFlightHours} hrs</span>
+              </div>
+              <div className="pt-2 text-[11px] text-amber-300/90 border-t border-slate-800 flex items-start gap-1.5">
+                <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                <span>
+                  Al eliminar a este piloto, también se borrarán en cascada todas sus licencias de vuelo y certificados de examen médico asociados.
+                </span>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setPilotToDelete(null)}
+                className="px-4 py-2 text-xs font-medium text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const remaining = pilots.filter((p) => p.id !== pilotToDelete.id);
+                  deletePilot(pilotToDelete.id);
+                  if (selectedPilotId === pilotToDelete.id) {
+                    setSelectedPilotId(remaining.length > 0 ? remaining[0].id : '');
+                  }
+                  setPilotToDelete(null);
+                }}
+                className="px-4 py-2 text-xs font-semibold text-white bg-rose-600 hover:bg-rose-500 rounded-lg shadow-sm transition-colors flex items-center gap-1.5"
+              >
+                <Trash2 className="w-4 h-4" />
+                <span>Confirmar Eliminación</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

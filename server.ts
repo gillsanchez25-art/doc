@@ -7,7 +7,7 @@ import { GoogleGenAI } from '@google/genai';
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
+const PORT = 3000;
 
 app.use(express.json({ limit: '50mb' }));
 
@@ -108,20 +108,20 @@ Si la imagen ya está perfectamente encuadrada sin fondo sobrante, devuelve ymin
     contentsParts.push({ text: promptText });
 
     if (aiClient) {
-      const response = await aiClient.models.generateContent({
-        model: 'gemini-3.8-flash',
-        contents: [{ parts: contentsParts }],
-        config: {
-          responseMimeType: 'application/json',
-        },
-      });
-
-      const responseText = response.text?.trim() || '{}';
       try {
+        const response = await aiClient.models.generateContent({
+          model: 'gemini-3.8-flash',
+          contents: [{ parts: contentsParts }],
+          config: {
+            responseMimeType: 'application/json',
+          },
+        });
+
+        const responseText = response.text?.trim() || '{}';
         const parsed = JSON.parse(responseText);
         return res.json({ success: true, data: parsed, engine: 'gemini-3.8-flash' });
-      } catch (err) {
-        console.warn('Failed to parse Gemini JSON, falling back:', err);
+      } catch (err: any) {
+        console.warn('Gemini call or JSON parsing error, falling back to intelligent aviation engine:', err.message || err);
       }
     }
 

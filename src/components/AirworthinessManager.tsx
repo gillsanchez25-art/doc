@@ -54,10 +54,8 @@ export const AirworthinessManager: React.FC<AirworthinessManagerProps> = ({
     }
   };
 
-  const handleDelete = (id: string, title: string) => {
-    if (window.confirm(`¿Está seguro de eliminar el certificado "${title}"?`)) {
-      deleteAirworthinessRecord(id);
-    }
+  const handleDelete = (id: string, _title?: string) => {
+    deleteAirworthinessRecord(id);
   };
 
   return (

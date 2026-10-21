@@ -43,10 +43,8 @@ export const MedicalManager: React.FC<MedicalManagerProps> = ({
     }
   };
 
-  const handleDelete = (id: string, name: string) => {
-    if (window.confirm(`¿Está seguro de eliminar el certificado médico de ${name}?`)) {
-      deleteMedicalCertificate(id);
-    }
+  const handleDelete = (id: string, _name?: string) => {
+    deleteMedicalCertificate(id);
   };
 
   return (

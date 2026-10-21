@@ -16,6 +16,7 @@ import {
   Plane,
   HeartPulse,
   Award,
+  Users,
   Crop,
   Maximize2,
   RefreshCw,
@@ -58,9 +59,21 @@ export const AviationScannerModal: React.FC<AviationScannerModalProps> = ({
     addLicense,
     addMedicalCertificate,
     addAirworthinessRecord,
+    addPilot,
+    addAircraft,
     pilots,
     aircraft,
   } = useAviation();
+
+  const findMatchingPilot = (name?: string) => {
+    if (!name) return null;
+    const clean = name.toLowerCase().replace(/^(cap\.|capitán|p\.a\.|lic\.|ing\.|dr\.)\s+/i, '').trim();
+    if (!clean) return null;
+    return pilots.find((p) => {
+      const pClean = p.fullName.toLowerCase().replace(/^(cap\.|capitán|p\.a\.|lic\.|ing\.|dr\.)\s+/i, '').trim();
+      return pClean.includes(clean) || clean.includes(pClean);
+    });
+  };
 
   const [documentHint, setDocumentHint] = useState<ScannerDocHint>(defaultDocHint);
 
@@ -340,13 +353,31 @@ export const AviationScannerModal: React.FC<AviationScannerModalProps> = ({
     const finalDocUrl = enhancedImage || frontImage || '';
 
     if (docType === 'licencia_vuelo') {
-      const matchedPilot = pilots.find((p) =>
-        p.fullName.toLowerCase().includes((extractedData.entityName || '').toLowerCase())
-      );
+      const cleanName = (extractedData.entityName || '').trim();
+      let matchedPilot = findMatchingPilot(cleanName);
+      let finalPilotId = matchedPilot?.id;
+      let finalPilotName = matchedPilot?.fullName || cleanName || 'Capitán Titular';
+
+      // Auto-register crew member if not already registered!
+      if (!matchedPilot) {
+        const cat = (extractedData.categoryOrClass as any) || 'CPL';
+        const role = cat === 'ATPL' ? 'Capitán' : cat === 'FI' ? 'Instructor' : cat === 'PPL' ? 'Piloto Privado' : 'Primer Oficial';
+        const newPilot = addPilot({
+          fullName: cleanName || 'Cap. Piloto Escaneado',
+          nationalId: extractedData.documentNumber || `ID-${Date.now().toString().slice(-6)}`,
+          email: `${cleanName.toLowerCase().replace(/[^a-z0-9]/g, '.')}@aerodoc.ops`,
+          phone: '+52 (55) 5500-0000',
+          role: role,
+          baseAirport: 'MMMX',
+          totalFlightHours: cat === 'ATPL' ? 1800 : cat === 'CPL' ? 320 : 80,
+        });
+        finalPilotId = newPilot.id;
+        finalPilotName = newPilot.fullName;
+      }
 
       addLicense({
-        pilotId: matchedPilot ? matchedPilot.id : `pilot-scan-${Date.now()}`,
-        pilotName: extractedData.entityName || 'Piloto Titular',
+        pilotId: finalPilotId!,
+        pilotName: finalPilotName,
         category: (extractedData.categoryOrClass as any) || 'CPL',
         licenseNumber: extractedData.documentNumber || `LIC-${Date.now()}`,
         issuingAuthority: extractedData.issuingAuthority || 'AFAC México',
@@ -360,13 +391,29 @@ export const AviationScannerModal: React.FC<AviationScannerModalProps> = ({
         fileSize: '1.9 MB',
       });
     } else if (docType === 'examen_medico') {
-      const matchedPilot = pilots.find((p) =>
-        p.fullName.toLowerCase().includes((extractedData.entityName || '').toLowerCase())
-      );
+      const cleanName = (extractedData.entityName || '').trim();
+      let matchedPilot = findMatchingPilot(cleanName);
+      let finalPilotId = matchedPilot?.id;
+      let finalPilotName = matchedPilot?.fullName || cleanName || 'Piloto Titular';
+
+      // Auto-register crew member if not already registered!
+      if (!matchedPilot) {
+        const newPilot = addPilot({
+          fullName: cleanName || 'P.A. Piloto Escaneado',
+          nationalId: extractedData.documentNumber || `MED-${Date.now().toString().slice(-6)}`,
+          email: `${cleanName.toLowerCase().replace(/[^a-z0-9]/g, '.')}@aerodoc.ops`,
+          phone: '+52 (55) 5500-0000',
+          role: 'Primer Oficial',
+          baseAirport: 'MMMX',
+          totalFlightHours: 250,
+        });
+        finalPilotId = newPilot.id;
+        finalPilotName = newPilot.fullName;
+      }
 
       addMedicalCertificate({
-        pilotId: matchedPilot ? matchedPilot.id : `pilot-scan-${Date.now()}`,
-        pilotName: extractedData.entityName || 'Piloto Titular',
+        pilotId: finalPilotId!,
+        pilotName: finalPilotName,
         medicalClass: (extractedData.categoryOrClass as any) || 'Clase 1',
         certificateNumber: extractedData.documentNumber || `MED-${Date.now()}`,
         authorizedExaminer: extractedData.inspectorOrDoctorName || 'Médico Examinador Aéreo AME',
@@ -380,14 +427,35 @@ export const AviationScannerModal: React.FC<AviationScannerModalProps> = ({
         fileSize: '1.6 MB',
       });
     } else if (docType === 'certificado_ruido') {
-      const matchedAc = aircraft.find((a) =>
-        a.registration.toLowerCase().includes((extractedData.aircraftRegistration || '').toLowerCase())
-      );
+      const reg = (extractedData.aircraftRegistration || 'XB-CAP').trim().toUpperCase();
+      let matchedAc = aircraft.find((a) => a.registration.trim().toUpperCase() === reg);
+      let finalAircraftId = matchedAc?.id;
+      let finalRegistration = matchedAc?.registration || reg;
+      let finalModel = matchedAc?.model || extractedData.aircraftModel || 'Aeronave Registrada';
+
+      if (!matchedAc) {
+        const newAc = addAircraft({
+          registration: reg,
+          make: (extractedData.aircraftModel || 'Cessna').split(' ')[0],
+          model: extractedData.aircraftModel || 'Cessna 172S',
+          serialNumber: `SN-${Date.now().toString().slice(-6)}`,
+          year: 2021,
+          operator: 'Operaciones Aéreas AeroDoc',
+          baseAirport: 'MMMX',
+          totalAirframeHours: extractedData.inspectionHours || 1450,
+          engineHours: extractedData.inspectionHours || 1450,
+          isAirworthy: true,
+          notes: 'Aeronave registrada automáticamente tras escaneo de certificado oficial',
+        });
+        finalAircraftId = newAc.id;
+        finalRegistration = newAc.registration;
+        finalModel = newAc.model;
+      }
 
       addAirworthinessRecord({
-        aircraftId: matchedAc ? matchedAc.id : `ac-scan-${Date.now()}`,
-        aircraftRegistration: extractedData.aircraftRegistration || (matchedAc ? matchedAc.registration : 'XB-CAP'),
-        aircraftModel: extractedData.aircraftModel || (matchedAc ? matchedAc.model : 'Aeronave Registrada'),
+        aircraftId: finalAircraftId!,
+        aircraftRegistration: finalRegistration,
+        aircraftModel: finalModel,
         type: 'noise_cert',
         title: extractedData.title || 'Certificado de Homologación Acústica de Aeronave (Ruido)',
         documentNumber: extractedData.documentNumber || `NOISE-${Date.now()}`,
@@ -402,14 +470,35 @@ export const AviationScannerModal: React.FC<AviationScannerModalProps> = ({
         fileSize: '1.8 MB',
       });
     } else if (docType === 'certificado_estacion') {
-      const matchedAc = aircraft.find((a) =>
-        a.registration.toLowerCase().includes((extractedData.aircraftRegistration || '').toLowerCase())
-      );
+      const reg = (extractedData.aircraftRegistration || 'XB-CAP').trim().toUpperCase();
+      let matchedAc = aircraft.find((a) => a.registration.trim().toUpperCase() === reg);
+      let finalAircraftId = matchedAc?.id;
+      let finalRegistration = matchedAc?.registration || reg;
+      let finalModel = matchedAc?.model || extractedData.aircraftModel || 'Aeronave Registrada';
+
+      if (!matchedAc) {
+        const newAc = addAircraft({
+          registration: reg,
+          make: (extractedData.aircraftModel || 'Cessna').split(' ')[0],
+          model: extractedData.aircraftModel || 'Cessna 172S',
+          serialNumber: `SN-${Date.now().toString().slice(-6)}`,
+          year: 2021,
+          operator: 'Operaciones Aéreas AeroDoc',
+          baseAirport: 'MMMX',
+          totalAirframeHours: extractedData.inspectionHours || 1450,
+          engineHours: extractedData.inspectionHours || 1450,
+          isAirworthy: true,
+          notes: 'Aeronave registrada automáticamente tras escaneo de certificado oficial',
+        });
+        finalAircraftId = newAc.id;
+        finalRegistration = newAc.registration;
+        finalModel = newAc.model;
+      }
 
       addAirworthinessRecord({
-        aircraftId: matchedAc ? matchedAc.id : `ac-scan-${Date.now()}`,
-        aircraftRegistration: extractedData.aircraftRegistration || (matchedAc ? matchedAc.registration : 'XB-CAP'),
-        aircraftModel: extractedData.aircraftModel || (matchedAc ? matchedAc.model : 'Aeronave Registrada'),
+        aircraftId: finalAircraftId!,
+        aircraftRegistration: finalRegistration,
+        aircraftModel: finalModel,
         type: 'radio_station_license',
         title: extractedData.title || 'Licencia de Estación de Telecomunicaciones Aeronáuticas',
         documentNumber: extractedData.documentNumber || `EST-RAD-${Date.now()}`,
@@ -424,14 +513,35 @@ export const AviationScannerModal: React.FC<AviationScannerModalProps> = ({
       });
     } else {
       // standard_airworthiness
-      const matchedAc = aircraft.find((a) =>
-        a.registration.toLowerCase().includes((extractedData.aircraftRegistration || '').toLowerCase())
-      );
+      const reg = (extractedData.aircraftRegistration || 'XB-SCAN').trim().toUpperCase();
+      let matchedAc = aircraft.find((a) => a.registration.trim().toUpperCase() === reg);
+      let finalAircraftId = matchedAc?.id;
+      let finalRegistration = matchedAc?.registration || reg;
+      let finalModel = matchedAc?.model || extractedData.aircraftModel || 'Aeronave Registrada';
+
+      if (!matchedAc) {
+        const newAc = addAircraft({
+          registration: reg,
+          make: (extractedData.aircraftModel || 'Cessna').split(' ')[0],
+          model: extractedData.aircraftModel || 'Cessna 172S',
+          serialNumber: `SN-${Date.now().toString().slice(-6)}`,
+          year: 2021,
+          operator: 'Operaciones Aéreas AeroDoc',
+          baseAirport: 'MMMX',
+          totalAirframeHours: extractedData.inspectionHours || 1800,
+          engineHours: extractedData.inspectionHours || 1800,
+          isAirworthy: true,
+          notes: 'Aeronave registrada automáticamente tras escaneo de certificado oficial',
+        });
+        finalAircraftId = newAc.id;
+        finalRegistration = newAc.registration;
+        finalModel = newAc.model;
+      }
 
       addAirworthinessRecord({
-        aircraftId: matchedAc ? matchedAc.id : `ac-scan-${Date.now()}`,
-        aircraftRegistration: extractedData.aircraftRegistration || (matchedAc ? matchedAc.registration : 'XB-SCAN'),
-        aircraftModel: extractedData.aircraftModel || (matchedAc ? matchedAc.model : 'Aeronave Registrada'),
+        aircraftId: finalAircraftId!,
+        aircraftRegistration: finalRegistration,
+        aircraftModel: finalModel,
         type: 'standard_airworthiness',
         title: extractedData.title || 'Certificado de Aeronavegabilidad Oficial',
         documentNumber: extractedData.documentNumber || `CA-${Date.now()}`,
@@ -1036,6 +1146,70 @@ export const AviationScannerModal: React.FC<AviationScannerModalProps> = ({
                       Tipo: {extractedData.documentType}
                     </span>
                   </div>
+
+                  {/* Crew member or Aircraft Auto-registration Banner */}
+                  {(extractedData.documentType === 'licencia_vuelo' || extractedData.documentType === 'examen_medico') && (
+                    (() => {
+                      const matched = findMatchingPilot(extractedData.entityName);
+                      return matched ? (
+                        <div className="p-2.5 rounded-lg bg-sky-950/40 border border-sky-800/60 text-sky-200 text-xs flex items-center justify-between gap-3">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <Users className="w-4 h-4 text-sky-400 shrink-0" />
+                            <span className="truncate">
+                              Tripulante encontrado en el padrón: <strong>{matched.fullName}</strong> ({matched.role}) · Base {matched.baseAirport}.
+                            </span>
+                          </div>
+                          <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-sky-900/60 border border-sky-700 text-sky-300 shrink-0">
+                            REGISTRO EXISTENTE
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="p-2.5 rounded-lg bg-emerald-950/50 border border-emerald-700/60 text-emerald-200 text-xs flex items-center justify-between gap-3">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <Sparkles className="w-4 h-4 text-emerald-400 shrink-0" />
+                            <span className="truncate">
+                              <strong>Nuevo Tripulante Detectado:</strong> No existe registro previo para "{extractedData.entityName || 'Titular'}". Se registrará automáticamente como nuevo piloto en el sistema.
+                            </span>
+                          </div>
+                          <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-emerald-900/80 border border-emerald-600 text-emerald-300 shrink-0">
+                            ALTA AUTOMÁTICA
+                          </span>
+                        </div>
+                      );
+                    })()
+                  )}
+
+                  {(extractedData.documentType === 'certificado_ruido' || extractedData.documentType === 'certificado_estacion' || extractedData.documentType === 'certificado_aeronavegabilidad') && (
+                    (() => {
+                      const reg = (extractedData.aircraftRegistration || '').trim().toUpperCase();
+                      const matched = aircraft.find(a => a.registration.trim().toUpperCase() === reg);
+                      return matched ? (
+                        <div className="p-2.5 rounded-lg bg-indigo-950/40 border border-indigo-800/60 text-indigo-200 text-xs flex items-center justify-between gap-3">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <Plane className="w-4 h-4 text-indigo-400 shrink-0" />
+                            <span className="truncate">
+                              Aeronave en flota: <strong>{matched.registration}</strong> ({matched.make} {matched.model}). El certificado se anexará a su expediente.
+                            </span>
+                          </div>
+                          <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-indigo-900/60 border border-indigo-700 text-indigo-300 shrink-0">
+                            AERONAVE REGISTRADA
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="p-2.5 rounded-lg bg-emerald-950/50 border border-emerald-700/60 text-emerald-200 text-xs flex items-center justify-between gap-3">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <Sparkles className="w-4 h-4 text-emerald-400 shrink-0" />
+                            <span className="truncate">
+                              <strong>Nueva Aeronave Detectada:</strong> Matrícula "{reg || 'Desconocida'}". Se creará automáticamente en la flota de aeronaves.
+                            </span>
+                          </div>
+                          <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-emerald-900/80 border border-emerald-600 text-emerald-300 shrink-0">
+                            ALTA AUTOMÁTICA
+                          </span>
+                        </div>
+                      );
+                    })()
+                  )}
 
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
                     <div>

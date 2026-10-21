@@ -27,11 +27,13 @@ export const AircraftCategoryView: React.FC<AircraftCategoryViewProps> = ({
     aircraft,
     airworthinessRecords,
     deleteAirworthinessRecord,
+    deleteAircraft,
     toggleAircraftAirworthy,
     openDocumentViewer,
     allDocuments,
   } = useAviation();
 
+  const [aircraftToDelete, setAircraftToDelete] = useState<Aircraft | null>(null);
   const [activeSubcategory, setActiveSubcategory] = useState<AircraftSubcategory>(initialSubcategory);
   const [selectedAircraftId, setSelectedAircraftId] = useState<string>(() => {
     return selectedAircraftIdProp || (aircraft.length > 0 ? aircraft[0].id : '');
@@ -82,10 +84,8 @@ export const AircraftCategoryView: React.FC<AircraftCategoryViewProps> = ({
     if (docItem) openDocumentViewer(docItem);
   };
 
-  const handleDelete = (id: string, title: string) => {
-    if (window.confirm(`¿Está seguro de eliminar el certificado "${title}"?`)) {
-      deleteAirworthinessRecord(id);
-    }
+  const handleDelete = (id: string, _title?: string) => {
+    deleteAirworthinessRecord(id);
   };
 
   // Aircraft Unified Dossier Data
@@ -216,10 +216,10 @@ export const AircraftCategoryView: React.FC<AircraftCategoryViewProps> = ({
               const hasExpired = acRecords.some((r) => r.status === 'expired');
 
               return (
-                <button
+                <div
                   key={ac.id}
                   onClick={() => setSelectedAircraftId(ac.id)}
-                  className={`p-4 rounded-xl border text-left transition-all ${
+                  className={`group p-4 rounded-xl border text-left transition-all cursor-pointer relative ${
                     isSelected
                       ? 'bg-slate-800 border-indigo-500 shadow-sm'
                       : 'bg-slate-900 border-slate-800 hover:border-slate-700'
@@ -227,13 +227,26 @@ export const AircraftCategoryView: React.FC<AircraftCategoryViewProps> = ({
                 >
                   <div className="flex items-center justify-between gap-1">
                     <span className="font-mono text-sm font-bold text-sky-400">{ac.registration}</span>
-                    <span
-                      className={`text-[11px] font-semibold flex items-center gap-1 ${
-                        ac.isAirworthy && !hasExpired ? 'text-emerald-400' : 'text-amber-400'
-                      }`}
-                    >
-                      {ac.isAirworthy && !hasExpired ? 'Aeronavegable' : 'En Mantenimiento'}
-                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <span
+                        className={`text-[11px] font-semibold flex items-center gap-1 ${
+                          ac.isAirworthy && !hasExpired ? 'text-emerald-400' : 'text-amber-400'
+                        }`}
+                      >
+                        {ac.isAirworthy && !hasExpired ? 'Aeronavegable' : 'En Mantenimiento'}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setAircraftToDelete(ac);
+                        }}
+                        className="p-1 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-rose-950/60 opacity-60 group-hover:opacity-100 transition-all"
+                        title={`Eliminar aeronave ${ac.registration}`}
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </div>
                   <div className="text-sm font-bold text-white mt-1">
                     {ac.make} {ac.model}
@@ -243,7 +256,7 @@ export const AircraftCategoryView: React.FC<AircraftCategoryViewProps> = ({
                     <span aria-hidden="true">·</span>
                     <span>{ac.baseAirport}</span>
                   </div>
-                </button>
+                </div>
               );
             })}
           </div>
@@ -274,6 +287,15 @@ export const AircraftCategoryView: React.FC<AircraftCategoryViewProps> = ({
                   </div>
 
                   <div className="flex items-center gap-2.5">
+                    <button
+                      onClick={() => setAircraftToDelete(activeAircraft)}
+                      className="px-2.5 py-1.5 text-xs font-semibold text-rose-400/80 hover:text-rose-300 hover:bg-rose-950/40 rounded-lg border border-rose-900/40 hover:border-rose-700/60 transition-colors flex items-center gap-1.5"
+                      title="Eliminar esta aeronave de la flota"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>Eliminar Aeronave</span>
+                    </button>
+
                     <button
                       onClick={() => toggleAircraftAirworthy(activeAircraft.id)}
                       className={`px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors flex items-center gap-1.5 ${
@@ -769,6 +791,73 @@ export const AircraftCategoryView: React.FC<AircraftCategoryViewProps> = ({
               })}
             </div>
           )}
+        </div>
+      )}
+
+      {/* Confirmation Modal for Aircraft Deletion */}
+      {aircraftToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-150">
+          <div className="bg-slate-900 border border-rose-500/40 rounded-2xl w-full max-w-md p-6 shadow-2xl space-y-4">
+            <div className="flex items-center gap-3 text-rose-400">
+              <div className="w-10 h-10 rounded-xl bg-rose-950/80 border border-rose-800/60 flex items-center justify-center shrink-0">
+                <Trash2 className="w-5 h-5 text-rose-400" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-white">¿Eliminar Aeronave de la Flota?</h3>
+                <p className="text-xs text-rose-400/80">Acción permanente en el registro técnico</p>
+              </div>
+            </div>
+
+            <div className="p-3.5 rounded-xl bg-slate-950/70 border border-slate-800 space-y-1.5 text-xs text-slate-300">
+              <div>
+                <span className="text-slate-500">Matrícula:</span>{' '}
+                <span className="font-mono font-bold text-sky-400">{aircraftToDelete.registration}</span>
+              </div>
+              <div>
+                <span className="text-slate-500">Modelo:</span>{' '}
+                <span className="font-semibold text-white">{aircraftToDelete.make} {aircraftToDelete.model} ({aircraftToDelete.year})</span>
+              </div>
+              <div>
+                <span className="text-slate-500">Operador / Base:</span>{' '}
+                <span>{aircraftToDelete.operator} · {aircraftToDelete.baseAirport}</span>
+              </div>
+              <div>
+                <span className="text-slate-500">Horas Totales Celda:</span>{' '}
+                <span className="font-mono">{aircraftToDelete.totalAirframeHours} TT hrs</span>
+              </div>
+              <div className="pt-2 text-[11px] text-amber-300/90 border-t border-slate-800 flex items-start gap-1.5">
+                <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                <span>
+                  Al eliminar esta aeronave, también se desvincularán y borrarán en cascada todos sus certificados de aeronavegabilidad, ruido y estación de radio asociados.
+                </span>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setAircraftToDelete(null)}
+                className="px-4 py-2 text-xs font-medium text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const remaining = aircraft.filter((a) => a.id !== aircraftToDelete.id);
+                  deleteAircraft(aircraftToDelete.id);
+                  if (selectedAircraftId === aircraftToDelete.id) {
+                    setSelectedAircraftId(remaining.length > 0 ? remaining[0].id : '');
+                  }
+                  setAircraftToDelete(null);
+                }}
+                className="px-4 py-2 text-xs font-semibold text-white bg-rose-600 hover:bg-rose-500 rounded-lg shadow-sm transition-colors flex items-center gap-1.5"
+              >
+                <Trash2 className="w-4 h-4" />
+                <span>Confirmar Eliminación</span>
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

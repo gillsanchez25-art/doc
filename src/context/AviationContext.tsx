@@ -43,8 +43,10 @@ interface AviationContextType {
   updateAirworthinessRecord: (id: string, record: Partial<AirworthinessRecord>) => void;
   deleteAirworthinessRecord: (id: string) => void;
 
-  addPilot: (pilot: Omit<Pilot, 'id'>) => void;
-  addAircraft: (ac: Omit<Aircraft, 'id'>) => void;
+  addPilot: (pilot: Omit<Pilot, 'id'>) => Pilot;
+  deletePilot: (id: string) => void;
+  addAircraft: (ac: Omit<Aircraft, 'id'>) => Aircraft;
+  deleteAircraft: (id: string) => void;
   toggleAircraftAirworthy: (id: string) => void;
 
   // Reset & Backup
@@ -322,20 +324,33 @@ export const AviationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setAirworthinessRecords((prev) => prev.filter((air) => air.id !== id));
   };
 
-  const addPilot = (pilotData: Omit<Pilot, 'id'>) => {
+  const addPilot = (pilotData: Omit<Pilot, 'id'>): Pilot => {
     const newPilot: Pilot = {
       ...pilotData,
       id: `pilot-${Date.now()}`,
     };
     setPilots((prev) => [...prev, newPilot]);
+    return newPilot;
   };
 
-  const addAircraft = (acData: Omit<Aircraft, 'id'>) => {
+  const deletePilot = (id: string) => {
+    setPilots((prev) => prev.filter((p) => p.id !== id));
+    setLicenses((prev) => prev.filter((l) => l.pilotId !== id));
+    setMedicalCertificates((prev) => prev.filter((m) => m.pilotId !== id));
+  };
+
+  const addAircraft = (acData: Omit<Aircraft, 'id'>): Aircraft => {
     const newAc: Aircraft = {
       ...acData,
       id: `ac-${Date.now()}`,
     };
     setAircraft((prev) => [...prev, newAc]);
+    return newAc;
+  };
+
+  const deleteAircraft = (id: string) => {
+    setAircraft((prev) => prev.filter((a) => a.id !== id));
+    setAirworthinessRecords((prev) => prev.filter((r) => r.aircraftId !== id));
   };
 
   const toggleAircraftAirworthy = (id: string) => {
@@ -345,18 +360,16 @@ export const AviationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   };
 
   const resetToDefaultData = () => {
-    if (window.confirm('¿Desea restaurar todos los registros de ejemplo de aviación? Esta acción reiniciará licencias, médicos y aeronaves.')) {
-      setPilots(initialPilots);
-      setLicenses(initialLicenses);
-      setMedicalCertificates(initialMedicalCertificates);
-      setAircraft(initialAircraft);
-      setAirworthinessRecords(initialAirworthinessRecords);
-      localStorage.removeItem(`${STORAGE_KEY}_pilots`);
-      localStorage.removeItem(`${STORAGE_KEY}_licenses`);
-      localStorage.removeItem(`${STORAGE_KEY}_medicals`);
-      localStorage.removeItem(`${STORAGE_KEY}_aircraft`);
-      localStorage.removeItem(`${STORAGE_KEY}_airworthiness`);
-    }
+    setPilots(initialPilots);
+    setLicenses(initialLicenses);
+    setMedicalCertificates(initialMedicalCertificates);
+    setAircraft(initialAircraft);
+    setAirworthinessRecords(initialAirworthinessRecords);
+    localStorage.removeItem(`${STORAGE_KEY}_pilots`);
+    localStorage.removeItem(`${STORAGE_KEY}_licenses`);
+    localStorage.removeItem(`${STORAGE_KEY}_medicals`);
+    localStorage.removeItem(`${STORAGE_KEY}_aircraft`);
+    localStorage.removeItem(`${STORAGE_KEY}_airworthiness`);
   };
 
   const exportDatabaseJSON = () => {
@@ -431,7 +444,9 @@ export const AviationProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         updateAirworthinessRecord,
         deleteAirworthinessRecord,
         addPilot,
+        deletePilot,
         addAircraft,
+        deleteAircraft,
         toggleAircraftAirworthy,
         resetToDefaultData,
         exportDatabaseJSON,

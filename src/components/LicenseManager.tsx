@@ -43,10 +43,8 @@ export const LicenseManager: React.FC<LicenseManagerProps> = ({
     }
   };
 
-  const handleDelete = (id: string, name: string) => {
-    if (window.confirm(`¿Está seguro de eliminar la licencia de ${name}?`)) {
-      deleteLicense(id);
-    }
+  const handleDelete = (id: string, _name?: string) => {
+    deleteLicense(id);
   };
 
   return (
