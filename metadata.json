@@ -1,0 +1,6 @@
+{
+  "name": "AeroDoc - Biblioteca de Licencias y Aeronavegabilidad",
+  "description": "Sistema integral para la gestión y biblioteca de licencias de vuelo, exámenes médicos aeronáuticos y certificados de aeronavegabilidad de aeronaves.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
