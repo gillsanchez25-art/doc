@@ -84,6 +84,16 @@ function AppContent() {
         onOpenAuditReport={() => setIsAuditReportOpen(true)}
         onExportBackup={exportDatabaseJSON}
         onResetData={resetToDefaultData}
+        onSelectPilot={(pilotId) => {
+          setSelectedPilotId(pilotId);
+          setPilotSubcategory('expediente');
+          setActiveTab('pilots');
+        }}
+        onSelectAircraft={(aircraftId) => {
+          setSelectedAircraftId(aircraftId);
+          setAircraftSubcategory('expediente');
+          setActiveTab('aircraft');
+        }}
       />
 
       {/* Main Viewport Container */}

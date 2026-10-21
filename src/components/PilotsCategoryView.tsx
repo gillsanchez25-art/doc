@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Users, Award, HeartPulse, Scan, Plus, Search, Filter } from 'lucide-react';
 import { Pilot, FlightLicense, MedicalCertificate } from '../types/aviation';
 import { LicenseManager } from './LicenseManager';
@@ -29,6 +29,12 @@ export const PilotsCategoryView: React.FC<PilotsCategoryViewProps> = ({
   selectedPilotIdProp,
 }) => {
   const [activeSubcategory, setActiveSubcategory] = useState<PilotSubcategory>(initialSubcategory);
+
+  useEffect(() => {
+    if (initialSubcategory) {
+      setActiveSubcategory(initialSubcategory);
+    }
+  }, [initialSubcategory]);
 
   return (
     <div className="space-y-6">

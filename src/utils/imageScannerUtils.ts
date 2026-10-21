@@ -150,7 +150,7 @@ export function normalizeCropBox(
 }
 
 /**
- * Computer Vision edge & background detector: detects document boundaries by checking border contrast
+ * Computer Vision edge & background detector: detects document boundaries by checking border contrast and color distance
  */
 export function detectDocumentEdges(
   img: HTMLImageElement | HTMLCanvasElement
@@ -167,31 +167,44 @@ export function detectDocumentEdges(
   const imgData = ctx.getImageData(0, 0, w, h);
   const data = imgData.data;
 
-  // Helper to get luminance at x, y
-  const getLum = (x: number, y: number) => {
+  // Helper to get RGB at x, y
+  const getRGB = (x: number, y: number) => {
     const idx = (y * w + x) * 4;
-    return 0.299 * data[idx] + 0.587 * data[idx + 1] + 0.114 * data[idx + 2];
+    return { r: data[idx], g: data[idx + 1], b: data[idx + 2] };
+  };
+
+  // Helper to compute color distance
+  const colorDist = (c1: { r: number; g: number; b: number }, c2: { r: number; g: number; b: number }) => {
+    return Math.sqrt(
+      (c1.r - c2.r) ** 2 +
+      (c1.g - c2.g) ** 2 +
+      (c1.b - c2.b) ** 2
+    );
   };
 
   // Corner baseline colors (average of 4 corners to identify background/desk)
   const cornerSampleCount = 6;
-  let cornerLumSum = 0;
+  let bgR = 0, bgG = 0, bgB = 0;
   for (let i = 0; i < cornerSampleCount; i++) {
-    cornerLumSum += getLum(i, i);
-    cornerLumSum += getLum(w - 1 - i, i);
-    cornerLumSum += getLum(i, h - 1 - i);
-    cornerLumSum += getLum(w - 1 - i, h - 1 - i);
+    const c1 = getRGB(i, i);
+    const c2 = getRGB(w - 1 - i, i);
+    const c3 = getRGB(i, h - 1 - i);
+    const c4 = getRGB(w - 1 - i, h - 1 - i);
+    bgR += c1.r + c2.r + c3.r + c4.r;
+    bgG += c1.g + c2.g + c3.g + c4.g;
+    bgB += c1.b + c2.b + c3.b + c4.b;
   }
-  const bgAvgLum = cornerLumSum / (cornerSampleCount * 4);
+  const totalSamples = cornerSampleCount * 4;
+  const bgAvg = { r: bgR / totalSamples, g: bgG / totalSamples, b: bgB / totalSamples };
 
   // Scan from Top
   let topCut = 0;
   for (let y = 0; y < Math.floor(h * 0.35); y += 2) {
     let rowDiffSum = 0;
-    for (let x = Math.floor(w * 0.2); x < Math.floor(w * 0.8); x += 6) {
-      if (Math.abs(getLum(x, y) - bgAvgLum) > 28) rowDiffSum++;
+    for (let x = Math.floor(w * 0.15); x < Math.floor(w * 0.85); x += 5) {
+      if (colorDist(getRGB(x, y), bgAvg) > 24) rowDiffSum++;
     }
-    if (rowDiffSum > 5) {
+    if (rowDiffSum > 6) {
       topCut = Math.max(0, y - 4);
       break;
     }
@@ -201,10 +214,10 @@ export function detectDocumentEdges(
   let bottomCut = h;
   for (let y = h - 1; y > Math.floor(h * 0.65); y -= 2) {
     let rowDiffSum = 0;
-    for (let x = Math.floor(w * 0.2); x < Math.floor(w * 0.8); x += 6) {
-      if (Math.abs(getLum(x, y) - bgAvgLum) > 28) rowDiffSum++;
+    for (let x = Math.floor(w * 0.15); x < Math.floor(w * 0.85); x += 5) {
+      if (colorDist(getRGB(x, y), bgAvg) > 24) rowDiffSum++;
     }
-    if (rowDiffSum > 5) {
+    if (rowDiffSum > 6) {
       bottomCut = Math.min(h, y + 4);
       break;
     }
@@ -214,10 +227,10 @@ export function detectDocumentEdges(
   let leftCut = 0;
   for (let x = 0; x < Math.floor(w * 0.35); x += 2) {
     let colDiffSum = 0;
-    for (let y = Math.floor(h * 0.2); y < Math.floor(h * 0.8); y += 6) {
-      if (Math.abs(getLum(x, y) - bgAvgLum) > 28) colDiffSum++;
+    for (let y = Math.floor(h * 0.15); y < Math.floor(h * 0.85); y += 5) {
+      if (colorDist(getRGB(x, y), bgAvg) > 24) colDiffSum++;
     }
-    if (colDiffSum > 5) {
+    if (colDiffSum > 6) {
       leftCut = Math.max(0, x - 4);
       break;
     }
@@ -227,10 +240,10 @@ export function detectDocumentEdges(
   let rightCut = w;
   for (let x = w - 1; x > Math.floor(w * 0.65); x -= 2) {
     let colDiffSum = 0;
-    for (let y = Math.floor(h * 0.2); y < Math.floor(h * 0.8); y += 6) {
-      if (Math.abs(getLum(x, y) - bgAvgLum) > 28) colDiffSum++;
+    for (let y = Math.floor(h * 0.15); y < Math.floor(h * 0.85); y += 5) {
+      if (colorDist(getRGB(x, y), bgAvg) > 24) colDiffSum++;
     }
-    if (colDiffSum > 5) {
+    if (colDiffSum > 6) {
       rightCut = Math.min(w, x + 4);
       break;
     }
@@ -290,8 +303,13 @@ export async function rotateImage(imageSource: string, degrees: number = 90): Pr
 export async function cropImageToBox(
   imageSource: string,
   box?: CropBox | null,
-  preset: FramingPreset = 'auto'
+  preset: FramingPreset = 'auto',
+  paddingPercent: number = 0.5
 ): Promise<string> {
+  if (preset === 'full') {
+    return imageSource;
+  }
+
   return new Promise((resolve) => {
     const img = new Image();
     img.crossOrigin = 'anonymous';
@@ -303,7 +321,7 @@ export async function cropImageToBox(
         targetBox = detectDocumentEdges(img);
       }
 
-      const rect = normalizeCropBox(targetBox, img.width, img.height, 0.5);
+      const rect = normalizeCropBox(targetBox, img.width, img.height, paddingPercent);
 
       let cropX = rect.x;
       let cropY = rect.y;
@@ -340,6 +358,12 @@ export async function cropImageToBox(
           }
         }
       }
+
+      // Ensure boundaries inside image
+      cropX = Math.max(0, Math.min(img.width - 20, cropX));
+      cropY = Math.max(0, Math.min(img.height - 20, cropY));
+      cropW = Math.min(img.width - cropX, cropW);
+      cropH = Math.min(img.height - cropY, cropH);
 
       const canvas = document.createElement('canvas');
       canvas.width = cropW;

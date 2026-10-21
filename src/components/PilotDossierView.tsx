@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Users,
   Award,
@@ -58,6 +58,12 @@ export const PilotDossierView: React.FC<PilotDossierViewProps> = ({
   const [selectedPilotId, setSelectedPilotId] = useState<string>(() => {
     return selectedPilotIdProp || (pilots.length > 0 ? pilots[0].id : '');
   });
+
+  useEffect(() => {
+    if (selectedPilotIdProp) {
+      setSelectedPilotId(selectedPilotIdProp);
+    }
+  }, [selectedPilotIdProp]);
 
   const [searchQuery, setSearchQuery] = useState('');
 

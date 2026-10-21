@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Plane, Volume2, Radio, ShieldCheck, Plus, Scan, Eye, Edit2, Trash2, Calendar, FileText, CheckCircle2, AlertTriangle, AlertCircle, Wrench, Search, Filter } from 'lucide-react';
 import { useAviation } from '../context/AviationContext';
 import { Aircraft, AirworthinessRecord, AirworthinessCertType } from '../types/aviation';
@@ -36,6 +36,18 @@ export const AircraftCategoryView: React.FC<AircraftCategoryViewProps> = ({
   const [selectedAircraftId, setSelectedAircraftId] = useState<string>(() => {
     return selectedAircraftIdProp || (aircraft.length > 0 ? aircraft[0].id : '');
   });
+
+  useEffect(() => {
+    if (initialSubcategory) {
+      setActiveSubcategory(initialSubcategory);
+    }
+  }, [initialSubcategory]);
+
+  useEffect(() => {
+    if (selectedAircraftIdProp) {
+      setSelectedAircraftId(selectedAircraftIdProp);
+    }
+  }, [selectedAircraftIdProp]);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
 
