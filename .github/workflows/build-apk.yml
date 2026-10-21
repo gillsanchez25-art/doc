@@ -23,7 +23,7 @@ jobs:
           node-version: 22
 
       - name: Instalar dependencias
-        run: run: npm install --legacy-peer-deps
+        run: npm install --legacy-peer-deps
 
       - name: Compilar aplicacion web
         run: npm run build
