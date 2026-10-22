@@ -120,27 +120,122 @@ export const AviationScannerModal: React.FC<AviationScannerModalProps> = ({
 
   if (!isOpen) return null;
 
+
+  const applySelectedImage = (res: string, side: 'front' | 'back') => {
+    if (side === 'front') {
+      setFrontImage(res);
+      setRawFrontImage(res);
+    } else {
+      setBackImage(res);
+      setRawBackImage(res);
+    }
+
+    setEnhancedImage(null);
+    setExtractedData(null);
+    setManualMargins({ top: 0, bottom: 0, left: 0, right: 0 });
+  };
+
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>, side: 'front' | 'back') => {
     const file = e.target.files?.[0];
+
     if (file) {
       const reader = new FileReader();
       reader.onload = (event) => {
         if (event.target?.result) {
-          const res = event.target.result as string;
-          if (side === 'front') {
-            setFrontImage(res);
-            setRawFrontImage(res);
-          } else {
-            setBackImage(res);
-            setRawBackImage(res);
-          }
-          // Reset previous scan result when new image is picked
-          setEnhancedImage(null);
-          setExtractedData(null);
-          setManualMargins({ top: 0, bottom: 0, left: 0, right: 0 });
+          applySelectedImage(event.target.result as string, side);
         }
       };
       reader.readAsDataURL(file);
+    }
+
+    e.target.value = '';
+  };
+
+  const captureWithCamera = async (side: 'front' | 'back') => {
+    if (!Capacitor.isNativePlatform()) {
+      const input = side === 'front' ? frontInputRef.current : backInputRef.current;
+
+      if (input) {
+        input.setAttribute('capture', 'environment');
+        input.click();
+      }
+      return;
+    }
+
+    try {
+      const photo = await NativeCamera.getPhoto({
+        quality: 92,
+        allowEditing: false,
+        resultType: CameraResultType.DataUrl,
+        source: CameraSource.Camera,
+        direction: CameraDirection.Rear,
+        correctOrientation: true,
+      });
+
+      if (photo.dataUrl) {
+        applySelectedImage(photo.dataUrl, side);
+      }
+    } catch (error) {
+      console.error('No se pudo abrir la cámara:', error);
+    }
+  };
+  
+  const applySelectedImage = (res: string, side: 'front' | 'back') => {
+    if (side === 'front') {
+      setFrontImage(res);
+      setRawFrontImage(res);
+    } else {
+      setBackImage(res);
+      setRawBackImage(res);
+    }
+
+    setEnhancedImage(null);
+    setExtractedData(null);
+    setManualMargins({ top: 0, bottom: 0, left: 0, right: 0 });
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>, side: 'front' | 'back') => {
+    const file = e.target.files?.[0];
+
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        if (event.target?.result) {
+          applySelectedImage(event.target.result as string, side);
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+
+    e.target.value = '';
+  };
+
+  const captureWithCamera = async (side: 'front' | 'back') => {
+    if (!Capacitor.isNativePlatform()) {
+      const input = side === 'front' ? frontInputRef.current : backInputRef.current;
+
+      if (input) {
+        input.setAttribute('capture', 'environment');
+        input.click();
+      }
+      return;
+    }
+
+    try {
+      const photo = await NativeCamera.getPhoto({
+        quality: 92,
+        allowEditing: false,
+        resultType: CameraResultType.DataUrl,
+        source: CameraSource.Camera,
+        direction: CameraDirection.Rear,
+        correctOrientation: true,
+      });
+
+      if (photo.dataUrl) {
+        applySelectedImage(photo.dataUrl, side);
+      }
+    } catch (error) {
+      console.error('No se pudo abrir la cámara:', error);
     }
   };
 
