@@ -794,7 +794,7 @@ export const AviationScannerModal: React.FC<AviationScannerModalProps> = ({
                     <div className="relative group max-h-[170px] overflow-hidden rounded-lg border border-slate-700">
                       <img src={frontImage} alt="Anverso" className="h-[160px] w-auto object-contain" />
                       <button
-                        onClick={() => frontInputRef.current?.click()}
+                        onClick={() => captureWithCamera('front')}
                         className="absolute inset-0 bg-slate-950/70 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white text-xs font-semibold transition-opacity"
                       >
                         Cambiar imagen
@@ -802,7 +802,7 @@ export const AviationScannerModal: React.FC<AviationScannerModalProps> = ({
                     </div>
                   ) : (
                     <div
-                      onClick={() => frontInputRef.current?.click()}
+                      onClick={() => captureWithCamera('front')}
                       className="w-full py-8 border-2 border-dashed border-slate-800 hover:border-sky-500/50 rounded-lg text-center cursor-pointer transition-colors bg-slate-900/40"
                     >
                       <Camera className="w-7 h-7 text-slate-500 mx-auto mb-2" />
@@ -860,7 +860,7 @@ export const AviationScannerModal: React.FC<AviationScannerModalProps> = ({
                     <div className="relative group max-h-[170px] overflow-hidden rounded-lg border border-slate-700">
                       <img src={backImage} alt="Reverso" className="h-[160px] w-auto object-contain" />
                       <button
-                        onClick={() => backInputRef.current?.click()}
+                        onClick={() => captureWithCamera('back')}
                         className="absolute inset-0 bg-slate-950/70 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white text-xs font-semibold transition-opacity"
                       >
                         Cambiar imagen
@@ -868,7 +868,7 @@ export const AviationScannerModal: React.FC<AviationScannerModalProps> = ({
                     </div>
                   ) : (
                     <div
-                      onClick={() => backInputRef.current?.click()}
+                      onClick={() => captureWithCamera('back')}
                       className="w-full py-8 border-2 border-dashed border-slate-800 hover:border-slate-700 rounded-lg text-center cursor-pointer transition-colors bg-slate-900/40"
                     >
                       <Layers className="w-7 h-7 text-slate-500 mx-auto mb-2" />
