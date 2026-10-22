@@ -1,4 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { Capacitor } from '@capacitor/core';
+import { Camera as NativeCamera, CameraResultType, CameraSource, CameraDirection } from '@capacitor/camera';
 import {
   X,
   Scan,
